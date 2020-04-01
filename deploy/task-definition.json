@@ -1,0 +1,47 @@
+{
+  "containerDefinitions": [
+      {
+        "essential": true,
+        "image": "695423425981.dkr.ecr.ap-southeast-2.amazonaws.com/core-suppliers-api:latest",
+        "memoryReservation": 512,
+        "memory": 512,
+        "name": "core-suppliers-api",
+        "portMappings": [
+          {
+            "containerPort": 3001
+          }
+        ],
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "ecs-core-suppliers-api",
+            "awslogs-region": "ap-southeast-2"
+          }
+        },
+        "environment" : [
+          { "name" : "PORT", "value" : "3001" },
+          { "name" : "LOG_LEVEL", "value" : "debug" },
+          { "name" : "TYPEORM_SCHEMA", "value" : "core_suppliers" },
+          { "name" : "TYPEORM_LOGGING", "value" : "true" },
+
+          { "name" : "TYPEORM_ENTITIES", "value" : "**/models/*.js" },
+          { "name" : "TYPEORM_CONNECTION", "value" : "mssql" },
+          { "name" : "TYPEORM_SYNCHRONIZE", "value" : "false" },
+          { "name" : "TYPEORM_MAX_QUERY_EXECUTION_TIME", "value" : "10000" },
+          { "name" : "TYPEORM_DATABASE", "value" : "CORE_BUILDING" }
+        ],
+        "secrets": [{
+          "name": "TYPEORM_HOST",
+          "valueFrom": "arn:aws:ssm:ap-southeast-2:495940971177:parameter/nonprod/rds/rds_endpoint"
+        },{
+          "name": "TYPEORM_USERNAME",
+          "valueFrom": "arn:aws:ssm:ap-southeast-2:495940971177:parameter/nonprod/rds/rds_user"
+        },{
+          "name": "TYPEORM_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-southeast-2:495940971177:parameter/nonprod/rds/rds_password"
+        }]
+      }
+  ],
+  "family": "core-suppliers-api",
+  "executionRoleArn": "arn:aws:iam::495940971177:role/ecs-task-rescon"
+}

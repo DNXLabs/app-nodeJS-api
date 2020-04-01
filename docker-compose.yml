@@ -1,0 +1,27 @@
+version: "3.2"
+
+services:
+  builder:
+    image: node:10-alpine
+    volumes:
+      - .:/app:Z
+    working_dir: /app
+
+  google-auth:
+    image: dnxsolutions/aws-google-auth:dnx-0.0.30
+    env_file: .env
+    volumes:
+      - ./.env.auth:/work/.env
+    environment:
+      - GOOGLE_IDP_ID
+      - GOOGLE_SP_ID
+      - GOOGLE_USERNAME
+  aws:
+    image: dnxsolutions/aws:1.16.169-dnx1
+    entrypoint: "/bin/bash -c"
+    env_file:
+      - .env
+      - .env.auth
+      - .env.assume
+    volumes:
+      - ./deploy:/work

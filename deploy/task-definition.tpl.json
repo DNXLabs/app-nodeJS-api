@@ -1,0 +1,29 @@
+{
+  "containerDefinitions": [
+      {
+        "essential": true,
+        "image": "${IMAGE_NAME}",
+        "memoryReservation": 256,
+        "memory": 256,
+        "name": "${APP_NAME}",
+        "portMappings": [
+          {
+            "containerPort": ${CONTAINER_PORT}
+          }
+        ],
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "ecs-${APP_NAME}",
+            "awslogs-region": "ap-southeast-2"
+          }
+        },
+        "environment" : [
+          { "name" : "PORT", "value" : "${CONTAINER_PORT}" },
+          { "name" : "LOG_LEVEL", "value" : "debug" }
+        ]
+      }
+  ],
+  "family": "${APP_NAME}",
+  "executionRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecs-task-apps-01"
+}

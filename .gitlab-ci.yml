@@ -1,0 +1,140 @@
+image: dnxsolutions/musketeers:1.1.1-ecr
+services:
+  - docker:dind
+variables:
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
+  BUILD_VERSION: $CI_COMMIT_SHORT_SHA
+  AWS_ROLE: ci-deploy
+  CLUSTER_NAME: apps-01
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - package.json
+    - package-lock.json
+
+stages:
+  - install
+  - test
+  - dockerBuildPush
+  - deploy-nonprod
+  - notification-pre-deploy-prod
+  - deploy-prod
+
+# ------------------------------------------------------------------------------
+# CONTINUOUS INTEGRATION
+# ------------------------------------------------------------------------------
+# INSTALL STAGE
+# -------------
+libraries:
+  tags: [dnx_runner, docker]
+  stage: install
+  script:
+    - make install
+  cache:
+    policy: push
+  retry: 2
+  artifacts:
+    paths:
+      - node_modules/
+      - package.json
+      - package-lock.json
+    expire_in: 30 minutes
+
+# TEST STAGE
+# -------------
+# unit-tests:
+#   tags: [dnx_runner, docker]
+#   stage: test
+#   script:
+#     - make test
+#   dependencies:
+#     - libraries
+#   cache:
+#     policy: pull-push
+#   retry: 2
+
+# style-check:
+#   tags: [dnx_runner, docker]
+#   stage: test
+#   script:
+#     - make style-check
+#   dependencies:
+#     - libraries
+#   cache:
+#     policy: pull-push
+#   retry: 2
+
+build-test:
+  tags: [dnx_runner, docker]
+  stage: test
+  script:
+    - make build
+  dependencies:
+    - libraries
+  cache:
+    policy: pull-push
+  retry: 2
+
+dockerBuildAndPush:
+  when: on_success
+  tags: [dnx_runner, docker]
+  stage: dockerBuildPush
+  script:
+    - make dockerBuild dockerPush
+  only:
+    - master
+    - feateure_add_pipeline
+  cache:
+    policy: push
+# ------------------------------------------------------------------------------
+# CONTINUOUS DELIVERY
+# ------------------------------------------------------------------------------
+# -------------
+# DEPLOY STAGE
+# -------------
+
+"Deploy NonProd":
+  tags: [dnx_runner, docker]
+  when: on_success
+  stage: deploy-nonprod
+  variables:
+    AWS_ACCOUNT_ID: 663974054766 #NONPROD
+    AWS_ENV: nonprod
+  script:
+    - make deploy
+  only:
+    - master
+    - feateure_add_pipeline
+  cache:
+    policy: push
+
+"Notify Slack":
+  tags: [dnx_runner, docker]
+  when: on_success
+  stage: notification-pre-deploy-prod
+  variables:
+    AWS_ENV: prod
+  script:
+    - make slack-approval-request
+  only:
+    - master
+    - feateure_add_pipeline
+
+"Deploy Prod":
+  tags: [dnx_runner, docker]
+  when: manual
+  stage: deploy-prod
+  variables:
+    AWS_ACCOUNT_ID: 274939991404 #PROD
+    AWS_ENV: prod
+    AWS_ROLE: ci-deploy
+  script:
+    - make dockerTag slack-approval-response deploy
+  only:
+    - tags
+    - feateure_add_pipeline
+  cache:
+    policy: push
